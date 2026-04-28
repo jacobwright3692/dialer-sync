@@ -1,0 +1,16 @@
+{
+  "name": "attempting-contact-dialer-sync",
+  "version": "1.0.0",
+  "description": "Scheduled GoHighLevel Attempting Contact to manual call queue sync.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "run-once": "node src/sync.js",
+    "verify-matching": "node src/verify-matching.js",
+    "check": "node --check src/*.js"
+  }
+}

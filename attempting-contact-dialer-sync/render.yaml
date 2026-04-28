@@ -1,0 +1,31 @@
+services:
+  - type: worker
+    name: attempting-contact-dialer-sync
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GHL_API_TOKEN
+        sync: false
+      - key: GHL_LOCATION_ID
+        sync: false
+      - key: PIPELINE_ID
+        sync: false
+      - key: ATTEMPTING_CONTACT_STAGE_ID
+        sync: false
+      - key: DIALER_WORKFLOW_ID
+        sync: false
+      - key: DIALER_DEDUPE_TAG_PREFIX
+        value: dialer_added_today
+      - key: LOCAL_TIMEZONE
+        value: America/Indiana/Indianapolis
+      - key: SCHEDULE_TIMES
+        value: 10:00,13:00,17:00
+      - key: RUN_ON_START
+        value: "false"
+      - key: GHL_API_BASE_URL
+        value: https://services.leadconnectorhq.com
+      - key: GHL_API_VERSION
+        value: "2023-02-21"
+      - key: GHL_PAGE_LIMIT
+        value: "100"
