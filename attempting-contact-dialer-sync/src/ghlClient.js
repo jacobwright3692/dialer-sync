@@ -113,7 +113,7 @@ export class GhlClient {
   }
 
   async addContactToManualCallWorkflow(contactId) {
-    return this.request(
+    return this.requestWithMeta(
       `/contacts/${encodeURIComponent(contactId)}/workflow/${encodeURIComponent(this.config.dialerWorkflowId)}`,
       { method: "POST" }
     );
@@ -132,7 +132,7 @@ export class GhlClient {
       body.assignedTo = this.config.taskAssignedTo;
     }
 
-    return this.request(`/contacts/${encodeURIComponent(contactId)}/tasks`, {
+    return this.requestWithMeta(`/contacts/${encodeURIComponent(contactId)}/tasks`, {
       method: "POST",
       body
     });
@@ -146,6 +146,11 @@ export class GhlClient {
   }
 
   async request(path, options = {}) {
+    const result = await this.requestWithMeta(path, options);
+    return result.body;
+  }
+
+  async requestWithMeta(path, options = {}) {
     const response = await fetch(`${this.config.apiBaseUrl}${path}`, {
       method: options.method ?? "GET",
       headers: {
@@ -162,10 +167,17 @@ export class GhlClient {
 
     if (!response.ok) {
       const message = data.message || data.error || response.statusText;
-      throw new Error(`GoHighLevel API ${response.status} ${message}`);
+      const error = new Error(`GoHighLevel API ${response.status} ${message}`);
+      error.status = response.status;
+      error.body = data;
+      error.path = path;
+      throw error;
     }
 
-    return data;
+    return {
+      status: response.status,
+      body: data
+    };
   }
 }
 

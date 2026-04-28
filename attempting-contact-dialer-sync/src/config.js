@@ -16,7 +16,7 @@ export function getConfig() {
     stageId: readRequiredEnv("ATTEMPTING_CONTACT_STAGE_ID"),
     dialerWorkflowId,
     queueMode: dialerWorkflowId ? "workflow" : "task",
-    dedupeTagPrefix: readEnv("DIALER_DEDUPE_TAG_PREFIX", "dialer_added_today"),
+    dedupeTagPrefix: readEnv("DIALER_DEDUPE_TAG_PREFIX", "dialer_sent"),
     taskTitle: readEnv("GHL_TASK_TITLE", "Manual call - Attempting Contact"),
     taskBody: readEnv("GHL_TASK_BODY", "Queued from Attempting Contact deal board stage."),
     taskDueMinutes: Number.parseInt(readEnv("GHL_TASK_DUE_MINUTES", "0"), 10),

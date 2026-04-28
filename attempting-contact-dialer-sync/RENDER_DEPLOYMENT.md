@@ -48,7 +48,7 @@ ATTEMPTING_CONTACT_STAGE_ID=1963a146-d2c9-46d0-860f-f6960f8a8765
 Recommended defaults:
 
 ```env
-DIALER_DEDUPE_TAG_PREFIX=dialer_added_today
+DIALER_DEDUPE_TAG_PREFIX=dialer_sent
 LOCAL_TIMEZONE=America/Indiana/Indianapolis
 SCHEDULE_TIMES=10:00,13:00,17:00
 RUN_ON_START=false

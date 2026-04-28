@@ -38,13 +38,13 @@ When `DIALER_WORKFLOW_ID` is configured, the sync enrolls contacts with `POST /c
 
 The scheduler/API enrollment is the entry point for this automation. The GoHighLevel workflow does not need a native trigger named `Contact Added to Workflow`, and the sync does not depend on one. The target workflow only needs the `Manual Call` action/step configured for the power dialer queue. If GoHighLevel requires a trigger before the workflow can be saved or published, use the least intrusive placeholder trigger available in the GHL UI, but do not rely on that trigger for this automation.
 
-For once-per-day duplicate prevention, the sync applies a daily contact tag after a successful queue add:
+For scheduled-block duplicate prevention, the sync applies a run-window contact tag after a successful queue add:
 
 ```text
-dialer_added_today_YYYY-MM-DD
+dialer_sent_YYYY-MM-DD_HH
 ```
 
-Before adding a contact to the workflow or task fallback, it checks for today's tag and skips the contact if the tag is already present. The date uses `LOCAL_TIMEZONE`, so contacts can be processed again the next local day if they are still in `Attempting Contact`.
+Before adding a contact to the workflow or task fallback, it checks for the current run-window tag and skips the contact if that tag is already present. Old dialer tags from earlier scheduled blocks do not block future runs. The workflow should have re-entry configured appropriately; GoHighLevel prevents re-entry while a contact is still active in the workflow.
 
 ## Run Once
 
@@ -85,7 +85,7 @@ For Render deployment, see [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md).
 | `PIPELINE_ID` | yes | Existing Deal Board pipeline ID. |
 | `ATTEMPTING_CONTACT_STAGE_ID` | yes | Existing `Attempting Contact` stage ID. |
 | `DIALER_WORKFLOW_ID` | recommended | Existing workflow with a Manual Call action. The sync enrolls contacts by API, without relying on a separate GHL trigger. If empty, task fallback is used. |
-| `DIALER_DEDUPE_TAG_PREFIX` | no | Defaults to `dialer_added_today`; actual tag includes the local date. |
+| `DIALER_DEDUPE_TAG_PREFIX` | no | Defaults to `dialer_sent`; actual tag includes the local date and hour. |
 | `LOCAL_TIMEZONE` | no | Defaults to `America/Indiana/Indianapolis`. |
 | `SCHEDULE_TIMES` | no | Defaults to `10:00,13:00,17:00`. |
 | `RUN_ON_START` | no | Set `true` to sync immediately when scheduler starts. |

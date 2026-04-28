@@ -6,7 +6,7 @@ import { hasValidPhone } from "./phone.js";
 
 export async function runSync({ client, logger, scheduledFor = new Date() }) {
   const runId = createRunId(scheduledFor);
-  const dailyDedupeTag = createDailyDedupeTag(
+  const runDedupeTag = createRunDedupeTag(
     scheduledFor,
     client.config.timezone,
     client.config.dedupeTagPrefix
@@ -26,7 +26,7 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
     pipelineId: client.config.pipelineId,
     stageId: client.config.stageId,
     queueMode: client.config.queueMode,
-    dailyDedupeTag
+    runDedupeTag
   });
 
   let searchResult;
@@ -93,7 +93,8 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         runId,
         contactId,
         contactName: contactLabel,
-        opportunityId
+        opportunityId,
+        runDedupeTag
       });
 
       if (!hasValidPhone(phone)) {
@@ -108,20 +109,57 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         continue;
       }
 
-      if (contactHasTag(contact, dailyDedupeTag)) {
+      const runDedupeTagAlreadyExists = contactHasTag(contact, runDedupeTag);
+      logger.info("contact_dedupe_status", {
+        runId,
+        contactId,
+        contactName: contactLabel,
+        opportunityId,
+        runDedupeTag,
+        runDedupeTagAlreadyExists
+      });
+
+      if (runDedupeTagAlreadyExists) {
         summary.skipped += 1;
-        logger.info("contact_skipped_already_processed_today", {
+        logger.info("contact_skipped_already_processed_this_run_window", {
           runId,
           contactId,
           contactName: contactLabel,
           opportunityId,
-          skippedReason: "daily_dedupe_tag_already_present",
-          dailyDedupeTag
+          skippedReason: "run_dedupe_tag_already_present",
+          runDedupeTag
         });
         continue;
       }
 
-      await client.addContactToManualCallQueue({ ...contact, id: contact.id ?? contactId });
+      logger.info("workflow_enrollment_call_started", {
+        runId,
+        contactId,
+        contactName: contactLabel,
+        opportunityId,
+        runDedupeTag,
+        enrollmentApiCalled: true,
+        queueMode: client.config.queueMode,
+        workflowId: client.config.dialerWorkflowId || undefined
+      });
+
+      const enrollmentResponse = await client.addContactToManualCallQueue({
+        ...contact,
+        id: contact.id ?? contactId
+      });
+
+      logger.info("workflow_enrollment_call_finished", {
+        runId,
+        contactId,
+        contactName: contactLabel,
+        opportunityId,
+        runDedupeTag,
+        enrollmentApiCalled: true,
+        enrollmentStatus: enrollmentResponse?.status,
+        enrollmentBody: enrollmentResponse?.body,
+        finalResult: "added_to_workflow_or_task"
+      });
+
       logger.info("contact_added_to_workflow_or_task", {
         runId,
         contactId,
@@ -131,13 +169,13 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         workflowId: client.config.dialerWorkflowId || undefined
       });
 
-      await client.addTagsToContact(contactId, [dailyDedupeTag]);
+      await client.addTagsToContact(contactId, [runDedupeTag]);
       logger.info("contact_dedupe_tag_applied", {
         runId,
         contactId,
         contactName: contactLabel,
         opportunityId,
-        dailyDedupeTag
+        runDedupeTag
       });
 
       summary.added += 1;
@@ -147,7 +185,8 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         contactName: contactLabel,
         opportunityId,
         queueMode: client.config.queueMode,
-        dailyDedupeTag
+        runDedupeTag,
+        finalResult: "added"
       });
     } catch (error) {
       summary.failed += 1;
@@ -155,7 +194,12 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         runId,
         contactId,
         opportunityId,
-        error: error.message
+        runDedupeTag,
+        finalResult: "failed",
+        error: error.message,
+        enrollmentStatus: error.status,
+        enrollmentBody: error.body,
+        failureReason: inferFailureReason(error)
       });
     }
   }
@@ -183,16 +227,18 @@ function createRunId(date) {
   return date.toISOString().replace(/[:.]/g, "-");
 }
 
-export function createDailyDedupeTag(date, timezone, prefix) {
+export function createRunDedupeTag(date, timezone, prefix) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
 
-  return `${prefix}_${values.year}-${values.month}-${values.day}`;
+  return `${prefix}_${values.year}-${values.month}-${values.day}_${values.hour}`;
 }
 
 export function contactHasTag(contact, tagName) {
@@ -209,6 +255,19 @@ export function contactHasTag(contact, tagName) {
 function getContactLabel(contact, fallbackId) {
   const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim();
   return contact.name || contact.fullName || fullName || fallbackId;
+}
+
+function inferFailureReason(error) {
+  const text = JSON.stringify(error.body ?? error.message ?? "").toLowerCase();
+  if (text.includes("workflow") && (text.includes("active") || text.includes("already"))) {
+    return "workflow_active_or_reentry_blocked";
+  }
+
+  if (text.includes("re-entry") || text.includes("reentry")) {
+    return "workflow_reentry_blocked";
+  }
+
+  return "api_error";
 }
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) {
