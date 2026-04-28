@@ -44,7 +44,7 @@ For scheduled-block duplicate prevention, the sync applies a run-window contact 
 dialer_sent_YYYY-MM-DD_HH
 ```
 
-Before adding a contact to the workflow or task fallback, it checks for the current run-window tag and skips the contact if that tag is already present. Old dialer tags from earlier scheduled blocks do not block future runs. The workflow should have re-entry configured appropriately; GoHighLevel prevents re-entry while a contact is still active in the workflow.
+Before adding a contact to the workflow or task fallback, it checks for the current run-window tag and skips the contact if that tag is already present. Old dialer tags from earlier scheduled blocks do not block future runs. During each matched-contact sync, old dialer dedupe tags matching the configured prefix pattern are removed while the current run-window tag is preserved. The workflow should have re-entry configured appropriately; GoHighLevel prevents re-entry while a contact is still active in the workflow.
 
 ## Run Once
 

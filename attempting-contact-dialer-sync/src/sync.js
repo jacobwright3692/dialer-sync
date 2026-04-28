@@ -109,6 +109,19 @@ export async function runSync({ client, logger, scheduledFor = new Date() }) {
         continue;
       }
 
+      const oldDedupeTags = getOldDedupeTags(contact, runDedupeTag, client.config.dedupeTagPrefix);
+      if (oldDedupeTags.length > 0) {
+        await client.removeTagsFromContact(contactId, oldDedupeTags);
+        logger.info("old_dialer_dedupe_tags_removed", {
+          runId,
+          contactId,
+          contactName: contactLabel,
+          opportunityId,
+          runDedupeTag,
+          removedTags: oldDedupeTags
+        });
+      }
+
       const runDedupeTagAlreadyExists = contactHasTag(contact, runDedupeTag);
       logger.info("contact_dedupe_status", {
         runId,
@@ -242,14 +255,34 @@ export function createRunDedupeTag(date, timezone, prefix) {
 }
 
 export function contactHasTag(contact, tagName) {
+  return getContactTagNames(contact).some((tag) => tag === tagName);
+}
+
+export function getOldDedupeTags(contact, currentRunTag, configuredPrefix) {
+  const prefixes = Array.from(new Set([configuredPrefix, "dialer_sent", "dialer_added_today"]));
+  return getContactTagNames(contact).filter((tagName) => {
+    return tagName !== currentRunTag && prefixes.some((prefix) => isDedupeTag(tagName, prefix));
+  });
+}
+
+function getContactTagNames(contact) {
   const tags = Array.isArray(contact.tags) ? contact.tags : [];
-  return tags.some((tag) => {
+  return tags.map((tag) => {
     if (typeof tag === "string") {
-      return tag === tagName;
+      return tag;
     }
 
-    return tag?.name === tagName || tag?.tag === tagName;
-  });
+    return tag?.name ?? tag?.tag ?? "";
+  }).filter(Boolean);
+}
+
+function isDedupeTag(tagName, prefix) {
+  if (!prefix) {
+    return false;
+  }
+
+  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escapedPrefix}_\\d{4}-\\d{2}-\\d{2}(?:_\\d{2})?$`).test(tagName);
 }
 
 function getContactLabel(contact, fallbackId) {

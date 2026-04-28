@@ -145,6 +145,13 @@ export class GhlClient {
     });
   }
 
+  async removeTagsFromContact(contactId, tags) {
+    return this.request(`/contacts/${encodeURIComponent(contactId)}/tags`, {
+      method: "DELETE",
+      body: { tags }
+    });
+  }
+
   async request(path, options = {}) {
     const result = await this.requestWithMeta(path, options);
     return result.body;
