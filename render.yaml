@@ -2,6 +2,7 @@ services:
   - type: worker
     name: attempting-contact-dialer-sync
     env: node
+        rootDir: attempting-contact-dialer-sync
     buildCommand: npm install
     startCommand: npm start
     envVars:
