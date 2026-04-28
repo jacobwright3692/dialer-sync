@@ -3,8 +3,8 @@ services:
     name: attempting-contact-dialer-sync
     env: node
         rootDir: attempting-contact-dialer-sync
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd attempting-contact-dialer-sync && npm install
+startCommand: cd attempting-contact-dialer-sync && npm start
     envVars:
       - key: GHL_API_TOKEN
         sync: false
